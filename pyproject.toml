@@ -1,0 +1,8 @@
+[project]
+name = "fastapi-monitoring-and-observability"
+version = "0.0.1"
+description = "A FastAPI project template with monitoring and observability features"
+dependencies = [
+    "fastapi>=0.127.0",
+    "virtualenv>=20.35.4",
+]
