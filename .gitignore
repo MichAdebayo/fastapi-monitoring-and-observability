@@ -1,2 +1,5 @@
 .venv/
 docs/BRIEF_MONITORING_FINAL.md
+.env
+logs/
+__pycache__/
