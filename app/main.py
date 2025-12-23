@@ -9,8 +9,12 @@ from typing import AsyncGenerator
 # Initialize central logging as early as possible so module logs go into the
 # project `logs/app.log` file (rotating).
 from app.logging_config import setup_logging
+import logging
 
 setup_logging()
+
+# API logger for route-level contextual messages
+logger = logging.getLogger("api")
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() in ("true", "1", "t")
 
@@ -18,6 +22,14 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() in ("true", "1", "t")
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     SQLModel.metadata.create_all(engine)
+    # Log an actionable startup message including database hint
+    try:
+        logger.info(
+            "Application startup: DB tables created (url=%s)",
+            getattr(engine, "url", "<unknown>"),
+        )
+    except Exception:
+        logger.info("Application startup: DB tables created (url=<masked>)")
     yield
 
 
@@ -33,9 +45,11 @@ app.include_router(items_router)
 
 @app.get("/")
 def root() -> dict:
+    logger.info("Root endpoint accessed")
     return {"message": "Items CRUD API"}
 
 
 @app.get("/health")
 def health() -> dict:
+    logger.info("Health check OK")
     return {"status": "healthy"}

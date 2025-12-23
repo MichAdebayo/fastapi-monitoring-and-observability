@@ -76,20 +76,24 @@ class ItemService:
             >>> created = ItemService.create(db, new_item)
             >>> print(created.id)  # ID auto-généré
         """
+        logger = logging.getLogger("service.item")
         item = Item(**item_data.model_dump())
         db.add(item)
-        db.commit()
-        db.refresh(item)
-        # Debug log to help diagnose persistence issues in dev
-        from contextlib import suppress
-
-        with suppress(Exception):
-            logging.getLogger(__name__).info(
-                "Created item id=%s using db=%s",
-                item.id,
-                getattr(_engine, "url", "<unknown>"),
+        try:
+            db.commit()
+            db.refresh(item)
+            logger.info(
+                "Created item id=%s name=%s", item.id, getattr(item, "nom", "<unknown>")
             )
-        return item
+            return item
+        except Exception as exc:  # pragma: no cover - DB error handling
+            logger.error("Failed to persist new item: %s", exc)
+            # Attempt to rollback to avoid leaving the session in a bad state
+            try:
+                db.rollback()
+            except Exception:
+                logger.debug("Rollback failed after create error")
+            raise
 
     @staticmethod
     def update(db: Session, item_id: int, item_data: ItemUpdate) -> Item | None:
@@ -110,6 +114,7 @@ class ItemService:
             >>> update_data = ItemUpdate(prix=249.99)  # Ne met à jour que le prix
             >>> updated = ItemService.update(db, 1, update_data)
         """
+        logger = logging.getLogger("service.item")
         item = db.get(Item, item_id)
         if not item:
             return None
@@ -118,10 +123,19 @@ class ItemService:
         for field, value in update_data.items():
             setattr(item, field, value)
 
-        db.add(item)
-        db.commit()
-        db.refresh(item)
-        return item
+        try:
+            db.add(item)
+            db.commit()
+            db.refresh(item)
+            logger.info("Updated item id=%s", item_id)
+            return item
+        except Exception as exc:  # pragma: no cover - DB error handling
+            logger.error("Failed to update item id=%s: %s", item_id, exc)
+            try:
+                db.rollback()
+            except Exception:
+                logger.debug("Rollback failed after update error")
+            raise
 
     @staticmethod
     def delete(db: Session, item_id: int) -> bool:
@@ -139,10 +153,19 @@ class ItemService:
             >>> if success:
             ...     print("Article supprimé avec succès")
         """
+        logger = logging.getLogger("service.item")
         item = db.get(Item, item_id)
         if not item:
             return False
-
-        db.delete(item)
-        db.commit()
-        return True
+        try:
+            db.delete(item)
+            db.commit()
+            logger.info("Deleted item id=%s", item_id)
+            return True
+        except Exception as exc:  # pragma: no cover - DB error handling
+            logger.error("Failed to delete item id=%s: %s", item_id, exc)
+            try:
+                db.rollback()
+            except Exception:
+                logger.debug("Rollback failed after delete error")
+            raise

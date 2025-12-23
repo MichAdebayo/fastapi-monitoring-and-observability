@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlmodel import Session
 from typing import List
+import logging
 
 
 from app.database import get_db
@@ -12,13 +13,17 @@ router = APIRouter(prefix="/items", tags=["items"])
 
 MAX_ITEMS_PER_PAGE = 1000
 
+logger = logging.getLogger("api")
+
 
 @router.get("/", response_model=List[ItemResponse])
 def get_items(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> List[Item]:
     """Récupère la liste des items avec pagination."""
-    return ItemService.get_all(db, skip, limit)
+    items = ItemService.get_all(db, skip, limit)
+    logger.info("Fetched %d items (skip=%s limit=%s)", len(items), skip, limit)
+    return items
 
 
 @router.post("/", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
@@ -36,7 +41,20 @@ def create_item(
     Returns:
         ItemResponse: The created item.
     """
-    return ItemService.create(db, item_data)
+    logger.info(
+        "Create item request received: name=%s", getattr(item_data, "nom", "<unknown>")
+    )
+    try:
+        created = ItemService.create(db, item_data)
+        logger.info(
+            "Item created successfully id=%s name=%s",
+            created.id,
+            getattr(created, "nom", "<unknown>"),
+        )
+        return created
+    except Exception as exc:
+        logger.error("Failed to create item: %s", exc)
+        raise
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
@@ -56,8 +74,10 @@ def get_item(item_id: int, db: Session = Depends(get_db)) -> Item:
         HTTPException: If the item is not found.
     """
     if item := ItemService.get_by_id(db, item_id):
+        logger.info("Item retrieved id=%s", item_id)
         return item
     else:
+        logger.warning("Item not found id=%s", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Item with id {item_id} not found",
@@ -83,9 +103,16 @@ def update_item(
     Raises:
         HTTPException: If the item is not found.
     """
+    logger.info(
+        "Update request for id=%s data=%s",
+        item_id,
+        item_data.model_dump(exclude_unset=True),
+    )
     if item := ItemService.update(db, item_id, item_data):
+        logger.info("Item updated id=%s", item_id)
         return item
     else:
+        logger.warning("Update failed - not found id=%s", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Item with id {item_id} not found",
@@ -105,8 +132,13 @@ def delete_item(item_id: int, db: Session = Depends(get_db)) -> None:
     Raises:
         HTTPException: If the item is not found.
     """
+    logger.info("Delete request for id=%s", item_id)
     deleted = ItemService.delete(db, item_id)
-    if not deleted:
+    if deleted:
+        logger.info("Item deleted id=%s", item_id)
+        return None
+    else:
+        logger.warning("Delete failed - not found id=%s", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Item with id {item_id} not found",
