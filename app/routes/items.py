@@ -29,8 +29,22 @@ def get_items(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> List[Item]:
     """Get a list of items with pagination."""
+    # Validate pagination params and enforce sensible caps
+    if skip < 0:
+        logger.warning("Negative skip adjusted to 0 (was=%s)", skip)
+        skip = 0
+    if limit <= 0:
+        logger.warning("Non-positive limit adjusted to 1 (was=%s)", limit)
+        limit = 1
+    if limit > MAX_ITEMS_PER_PAGE:
+        logger.warning(
+            "Limit too large; capped to %s (requested=%s)", MAX_ITEMS_PER_PAGE, limit
+        )
+        limit = MAX_ITEMS_PER_PAGE
+
     with DatabaseQueryTimer():
         items = ItemService.get_all(db, skip, limit)
+
     items_read_total.inc(len(items))
     logger.info("Fetched %d items (skip=%s limit=%s)", len(items), skip, limit)
     return items
@@ -57,6 +71,8 @@ def create_item(
     with DatabaseQueryTimer():
         try:
             created = ItemService.create(db, item_data)
+            # increment metric only on successful persistence
+            items_created_total.inc()
             logger.info(
                 "Item created successfully id=%s name=%s",
                 created.id,
@@ -69,7 +85,6 @@ def create_item(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create item",
             ) from exc
-    items_created_total.inc()
 
 
 @router.get("/{item_id}", response_model=ItemResponse)

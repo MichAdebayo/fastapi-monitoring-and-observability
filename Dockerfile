@@ -18,7 +18,7 @@ ENV UV_SYSTEM_PYTHON=1
 COPY pyproject.toml uv.lock ./
 
 # Install build/runtime dependencies (uv will read pyproject/uv.lock)
-RUN uv sync --dev
+RUN uv sync --dev && uv pip install --upgrade pip setuptools wheel
 
 # Install the package into the builder image
 COPY . .
