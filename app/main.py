@@ -12,26 +12,55 @@ from app.monitoring.metrics import app_info
 # project `logs/app.log` file (rotating).
 from app.logging_config import setup_logging
 import logging
+import asyncio
+import time
+from sqlalchemy import text
 
 setup_logging()
 
 # API logger for route-level contextual messages
 logger = logging.getLogger("api")
+db_logger = logging.getLogger("db")
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() in ("true", "1", "t")
 
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
+    # Wait for Postgres to become ready (compose healthcheck helps, but
+    # perform proactive retries so the app doesn't crash on cold start).
+    def wait_for_db_sync(engine, timeout: int = 60, interval: float = 1.0):
+        end = time.time() + timeout
+        while True:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                db_logger.info("Database is reachable")
+                return
+            except Exception as exc:
+                if time.time() > end:
+                    db_logger.error(
+                        "Database not reachable after %s seconds: %s", timeout, exc
+                    )
+                    raise
+                db_logger.info("Waiting for database to be ready: %s", exc)
+                time.sleep(interval)
+
+    async def wait_for_db(engine, timeout: int = 60, interval: float = 1.0):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, wait_for_db_sync, engine, timeout, interval)
+
+    await wait_for_db(engine, timeout=60)
+
     SQLModel.metadata.create_all(engine)
     # Log an actionable startup message including database hint
     try:
         logger.info(
-            "Application startup: DB tables created (url=%s)",
+            "Application startup: DB tables ensured (url=%s)",
             getattr(engine, "url", "<unknown>"),
         )
     except Exception:
-        logger.info("Application startup: DB tables created (url=<masked>)")
+        logger.info("Application startup: DB tables ensured (url=<masked>)")
     yield
 
 
