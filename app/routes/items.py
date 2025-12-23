@@ -8,6 +8,14 @@ from app.database import get_db
 from app.schemas.item import ItemCreate, ItemResponse, ItemUpdate
 from app.services.item_service import ItemService
 from app.models.item import Item
+from app.monitoring.metrics import (
+    items_created_total,
+    items_read_total,
+    target_item_read_total,
+    items_updated_total,
+    items_deleted_total,
+    DatabaseQueryTimer,
+)
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -20,8 +28,10 @@ logger = logging.getLogger("api")
 def get_items(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> List[Item]:
-    """Récupère la liste des items avec pagination."""
-    items = ItemService.get_all(db, skip, limit)
+    """Get a list of items with pagination."""
+    with DatabaseQueryTimer():
+        items = ItemService.get_all(db, skip, limit)
+    items_read_total.inc(len(items))
     logger.info("Fetched %d items (skip=%s limit=%s)", len(items), skip, limit)
     return items
 
@@ -44,17 +54,22 @@ def create_item(
     logger.info(
         "Create item request received: name=%s", getattr(item_data, "nom", "<unknown>")
     )
-    try:
-        created = ItemService.create(db, item_data)
-        logger.info(
-            "Item created successfully id=%s name=%s",
-            created.id,
-            getattr(created, "nom", "<unknown>"),
-        )
-        return created
-    except Exception as exc:
-        logger.error("Failed to create item: %s", exc)
-        raise
+    with DatabaseQueryTimer():
+        try:
+            created = ItemService.create(db, item_data)
+            logger.info(
+                "Item created successfully id=%s name=%s",
+                created.id,
+                getattr(created, "nom", "<unknown>"),
+            )
+            return created
+        except Exception as exc:
+            logger.error("Failed to create item: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create item",
+            ) from exc
+    items_created_total.inc()
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
@@ -73,15 +88,17 @@ def get_item(item_id: int, db: Session = Depends(get_db)) -> Item:
     Raises:
         HTTPException: If the item is not found.
     """
-    if item := ItemService.get_by_id(db, item_id):
-        logger.info("Item retrieved id=%s", item_id)
-        return item
-    else:
-        logger.warning("Item not found id=%s", item_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Item with id {item_id} not found",
-        )
+    with DatabaseQueryTimer():
+        if item := ItemService.get_by_id(db, item_id):
+            logger.info("Item retrieved id=%s", item_id)
+            target_item_read_total.inc()
+            return item
+        else:
+            logger.warning("Item not found id=%s", item_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Item with id {item_id} not found",
+            ) from None
 
 
 @router.put("/{item_id}", response_model=ItemResponse)
@@ -108,15 +125,17 @@ def update_item(
         item_id,
         item_data.model_dump(exclude_unset=True),
     )
-    if item := ItemService.update(db, item_id, item_data):
-        logger.info("Item updated id=%s", item_id)
-        return item
-    else:
-        logger.warning("Update failed - not found id=%s", item_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Item with id {item_id} not found",
-        )
+    with DatabaseQueryTimer():
+        if item := ItemService.update(db, item_id, item_data):
+            logger.info("Item updated id=%s", item_id)
+            items_updated_total.inc()
+            return item
+        else:
+            logger.warning("Update failed - not found id=%s", item_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Item with id {item_id} not found",
+            ) from None
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -133,13 +152,16 @@ def delete_item(item_id: int, db: Session = Depends(get_db)) -> None:
         HTTPException: If the item is not found.
     """
     logger.info("Delete request for id=%s", item_id)
-    deleted = ItemService.delete(db, item_id)
+
+    with DatabaseQueryTimer():
+        deleted = ItemService.delete(db, item_id)
     if deleted:
         logger.info("Item deleted id=%s", item_id)
+        items_deleted_total.inc()
         return None
     else:
         logger.warning("Delete failed - not found id=%s", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Item with id {item_id} not found",
-        )
+        ) from None

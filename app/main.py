@@ -5,6 +5,8 @@ from app.database import engine
 from app.routes import items_router
 import os
 from typing import AsyncGenerator
+from prometheus_fastapi_instrumentator import Instrumentator
+from app.monitoring.metrics import app_info
 
 # Initialize central logging as early as possible so module logs go into the
 # project `logs/app.log` file (rotating).
@@ -35,10 +37,19 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="Items CRUD API",
-    description="API pour gérer une liste d'articles",
+    description="API for managing items with full CRUD operations and monitoring",
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# 📊 Instrumentation automatique
+instrumentator = Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/metrics"],
+)
+instrumentator.instrument(app).expose(app, endpoint="/metrics")
 
 app.include_router(items_router)
 
