@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: fastapi-monitoring-and-observability
+Version: 0.0.1
+Summary: A FastAPI project template with monitoring and observability features
+Requires-Dist: faker>=39.0.0
+Requires-Dist: fastapi>=0.127.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: prometheus-client>=0.23.1
+Requires-Dist: prometheus-fastapi-instrumentator>=7.1.0
+Requires-Dist: psycopg2-binary>=2.9.11
+Requires-Dist: sqlmodel>=0.0.27
+Requires-Dist: uvicorn>=0.40.0
+Requires-Dist: virtualenv>=20.35.4

@@ -13,7 +13,8 @@ services:
       - db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3030/health || exit 1"]
+      # Use Python for the healthcheck because the slim image may not include curl
+      test: ["CMD-SHELL", "python -c \"import sys,urllib.request;\ntry:\n r=urllib.request.urlopen('http://localhost:3030/health', timeout=3);\n sys.exit(0)\nexcept Exception:\n sys.exit(1)\" || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -54,9 +55,45 @@ services:
     networks:
       - monitoring
 
+  # Seed worker to generate traffic for metrics (dev only)
+  seed-worker:
+    build: ./tools/seed_worker
+    container_name: seed_worker
+    environment:
+      - API_BASE=${API_BASE}
+      - INTERVAL_S=${INTERVAL_S}
+      - CYCLE_S=${CYCLE_S}
+      - API_WAIT_TIMEOUT=${API_WAIT_TIMEOUT}
+      - API_WAIT_INTERVAL=${API_WAIT_INTERVAL}
+      - SEED=${SEED}
+      - WORKER_ID=${WORKER_ID}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    depends_on:
+      - api
+    networks:
+      - monitoring
+    restart: on-failure
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "4040:4040"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   prometheus_data:
+  grafana_data:
 
 networks:
   monitoring:
