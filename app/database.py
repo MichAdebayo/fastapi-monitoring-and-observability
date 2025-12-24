@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger("db")
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/items_db"
+    "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/items_db"
 )
 
 POOL_SIZE = 10
