@@ -159,21 +159,19 @@ These screenshots show three stress-test profiles used to validate behaviour und
 
 <figure>
   <img src="screenshots/users 50 spawn rate 10.png" alt="Locust 50 users" width="760" />
-  <figcaption><strong>Light test — 50 users</strong> — Stable RPS and low P95 latency.</figcaption>
 </figure>
+
 
 - **Medium test — 100 users, spawn rate 10** (`users 100 spawn rate 10.png`) — Observation: increased latency and occasional error spikes under sustained load; useful to identify early contention points (DB latency, request queueing).
 
 <figure>
   <img src="screenshots/users 100 spawn rate 10.png" alt="Locust 100 users" width="760" />
-  <figcaption><strong>Medium test — 100 users</strong> — Increased latency and occasional error spikes.</figcaption>
 </figure>
 
 - **Heavy test — 1000 users, spawn rate 20** (`users 1000 spawn rate 20.png`) — Observation: system becomes overwhelmed, high error rate and timeouts observed. This test motivated reducing stress volume in verification runs to avoid crashing the single-node test environment.
 
 <figure>
   <img src="screenshots/users 1000 spawn rate 20.png" alt="Locust 1000 users" width="760" />
-  <figcaption><strong>Heavy test — 1000 users</strong> — High error rate and timeouts.</figcaption>
 </figure>
 
 **Summary of how these results answer the brief**
