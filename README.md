@@ -96,69 +96,85 @@ Below are the verification images, embedded inline as thumbnails for quick inspe
 
 ### Prometheus & metrics
 
-<div style="display:flex; gap:12px; flex-wrap:wrap;">
-  <figure style="width:220px; text-align:center;">
-    <a href="screenshots/prometheus%20fastapi%20up.png"><img src="screenshots/prometheus%20fastapi%20up.png" alt="Prometheus target up" width="200"/></a>
-    <figcaption><strong>Prometheus target UP</strong><br/>Prometheus scrapes `/metrics` (Phase 2).</figcaption>
-  </figure>
+- **Prometheus target: `fastapi` UP** (`prometheus fastapi up.png`) — verifies Prometheus scrapes the API `/metrics` endpoint.
 
-  <figure style="width:220px; text-align:center;">
-    <a href="screenshots/metrics%20endpoint.png"><img src="screenshots/metrics%20endpoint.png" alt="metrics endpoint" width="200"/></a>
-    <figcaption><strong>Metrics endpoint</strong><br/>Raw counters/histograms exposed by app (used for PromQL).</figcaption>
-  </figure>
+<figure>
+  <img src="screenshots/prometheus fastapi up.png" alt="Prometheus target up" width="760" />
+  <figcaption><strong>Prometheus target UP</strong> — Prometheus targets page showing `fastapi` as UP (Phase 2).</figcaption>
+</figure>
 
-  <figure style="width:220px; text-align:center;">
-    <a href="screenshots/items_created_total.png"><img src="screenshots/items_created_total.png" alt="items_created_total" width="200"/></a>
-    <figcaption><strong>items_created_total</strong><br/>Custom counter for `rate()`/`increase()` tests.</figcaption>
-  </figure>
+- **Raw `/metrics` output** (`metrics endpoint.png`) — shows the instrumented metrics exported by the app (counters, histograms, gauges). Useful when checking the app is properly exposing data for PromQL queries (Mission 1).
 
-  <figure style="width:220px; text-align:center;">
-    <a href="screenshots/http_request_total_by_method.png"><img src="screenshots/http_request_total_by_method.png" alt="http request by method" width="200"/></a>
-    <figcaption><strong>HTTP by method</strong><br/>Label filtering and aggregation example (Mission 1 Q2).</figcaption>
-  </figure>
+<figure>
+  <img src="screenshots/metrics endpoint.png" alt="metrics endpoint" width="760" />
+  <figcaption><strong>Metrics endpoint</strong> — Raw endpoint content used to validate metrics are exported.</figcaption>
+</figure>
 
-  <figure style="width:220px; text-align:center;">
-    <a href="screenshots/all_CRUD_operations.png"><img src="screenshots/all_CRUD_operations.png" alt="CRUD operations" width="200"/></a>
-    <figcaption><strong>CRUD operations</strong><br/>Business counters used for dashboards (Mission 2).</figcaption>
-  </figure>
-</div>
+- **Metric presence example: `items_created_total`** (`items_created_total.png`) — confirms a custom metric is being recorded and available for queries such as `rate(items_created_total[5m])`.
+
+<figure>
+  <img src="screenshots/items_created_total.png" alt="items_created_total" width="760" />
+  <figcaption><strong>items_created_total</strong> — Example counter visible in Prometheus.</figcaption>
+</figure>
+
+- **Label filtering example** (`http_request_total_by_method.png`) — demonstrates grouping and filtering by label (e.g., `sum(rate(http_requests_total[5m])) by (method)`).
+
+<figure>
+  <img src="screenshots/http_request_total_by_method.png" alt="http request by method" width="760" />
+  <figcaption><strong>HTTP requests by method</strong> — Label-based aggregation example.</figcaption>
+</figure>
+
+- **CRUD counters and aggregations** (`all_CRUD_operations.png`) — used for dashboards that display business metrics (Phase 3 dashboards) and to validate aggregation queries described in Mission 2.
+
+<figure>
+  <img src="screenshots/all_CRUD_operations.png" alt="CRUD operations" width="760" />
+  <figcaption><strong>CRUD operations</strong> — Aggregated business counters used in dashboards.</figcaption>
+</figure>
 
 ---
 
 ### Troubleshooting evidence (errors that were fixed)
 
-<div style="display:flex; gap:12px; flex-wrap:wrap;">
-  <figure style="width:320px; text-align:center;">
-    <a href="screenshots/api%20error%201.png"><img src="screenshots/api%20error%201.png" alt="API error 1" width="300"/></a>
-    <figcaption><strong>API error 1</strong><br/>Startup failure (missing deps / binding); fixed by `uv sync` & bind `0.0.0.0:3030`.</figcaption>
-  </figure>
+- **API startup error (missing packages / binding issue)** (`api error 1.png`) — captured the first failure where the app did not start due to missing deps / wrong bind address; fixed by installing missing packages (`uv sync`) and ensuring uvicorn binds to `0.0.0.0:3030`.
 
-  <figure style="width:320px; text-align:center;">
-    <a href="screenshots/api%20error%202.png"><img src="screenshots/api%20error%202.png" alt="API error 2" width="300"/></a>
-    <figcaption><strong>API error 2</strong><br/>Driver incompatibility (psycopg2) — upgraded to `psycopg` v3.</figcaption>
-  </figure>
-</div>
+<figure>
+  <img src="screenshots/api error 1.png" alt="API error 1" width="760" />
+  <figcaption><strong>API error 1</strong> — Startup failure before fixes.</figcaption>
+</figure>
+
+- **Driver compatibility error (psycopg2)** (`api error 2.png`) — showed the compatibility error that motivated switching to `psycopg` (psycopg v3). After upgrading dependencies, the API started reliably under normal conditions.
+
+<figure>
+  <img src="screenshots/api error 2.png" alt="API error 2" width="760" />
+  <figcaption><strong>API error 2</strong> — Driver compatibility error (fixed by upgrade).</figcaption>
+</figure>
 
 ---
 
 ### Stress tests (Locust) — observations and conclusions
 
-<div style="display:flex; gap:12px; flex-wrap:wrap;">
-  <figure style="width:260px; text-align:center;">
-    <a href="screenshots/users%2050%20spawn%20rate%2010.png"><img src="screenshots/users%2050%20spawn%20rate%2010.png" alt="Locust 50 users" width="240"/></a>
-    <figcaption><strong>Light — 50 users</strong><br/>Stable RPS and low P95 latency; no notable errors (baseline smoke test).</figcaption>
-  </figure>
+These screenshots show three stress-test profiles used to validate behaviour under increasing load. Observations summarize what was seen in each test and inform the recommended Locust parameters in `.env.example`.
 
-  <figure style="width:260px; text-align:center;">
-    <a href="screenshots/users%20100%20spawn%20rate%2010.png"><img src="screenshots/users%20100%20spawn%20rate%2010.png" alt="Locust 100 users" width="240"/></a>
-    <figcaption><strong>Medium — 100 users</strong><br/>Higher latency and occasional errors; indicates emerging contention under load.</figcaption>
-  </figure>
+- **Light test — 50 users, spawn rate 10** (`users 50 spawn rate 10.png`) — Observation: stable RPS, low P95 latency and no notable error spikes. This profile is a good baseline for functionality checks.
 
-  <figure style="width:260px; text-align:center;">
-    <a href="screenshots/users%201000%20spawn%20rate%2020.png"><img src="screenshots/users%201000%20spawn%20rate%2020.png" alt="Locust 1000 users" width="240"/></a>
-    <figcaption><strong>Heavy — 1000 users</strong><br/>High error rate and timeouts; system overwhelmed, informs safe test limits.</figcaption>
-  </figure>
-</div>
+<figure>
+  <img src="screenshots/users 50 spawn rate 10.png" alt="Locust 50 users" width="760" />
+  <figcaption><strong>Light test — 50 users</strong> — Stable RPS and low P95 latency.</figcaption>
+</figure>
+
+- **Medium test — 100 users, spawn rate 10** (`users 100 spawn rate 10.png`) — Observation: increased latency and occasional error spikes under sustained load; useful to identify early contention points (DB latency, request queueing).
+
+<figure>
+  <img src="screenshots/users 100 spawn rate 10.png" alt="Locust 100 users" width="760" />
+  <figcaption><strong>Medium test — 100 users</strong> — Increased latency and occasional error spikes.</figcaption>
+</figure>
+
+- **Heavy test — 1000 users, spawn rate 20** (`users 1000 spawn rate 20.png`) — Observation: system becomes overwhelmed, high error rate and timeouts observed. This test motivated reducing stress volume in verification runs to avoid crashing the single-node test environment.
+
+<figure>
+  <img src="screenshots/users 1000 spawn rate 20.png" alt="Locust 1000 users" width="760" />
+  <figcaption><strong>Heavy test — 1000 users</strong> — High error rate and timeouts.</figcaption>
+</figure>
 
 **Summary of how these results answer the brief**
 
