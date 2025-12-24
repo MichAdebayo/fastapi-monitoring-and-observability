@@ -12,8 +12,10 @@ Config via env:
 Behaviour: runs for CYCLE_S seconds performing a random operation every INTERVAL_S
 and then performs final diagnostics (list all items, sample of specific items).
 """
+
 from __future__ import annotations
 
+import contextlib
 import os
 import random
 import time
@@ -202,10 +204,8 @@ def main() -> None:
                     if created_ids:
                         item_id = random.choice(created_ids)
                         if delete_item(client, item_id):
-                            try:
+                            with contextlib.suppress(ValueError):
                                 created_ids.remove(item_id)
-                            except ValueError:
-                                pass
                 # reset backoff on success path; if we reach here assume success-ish
                 time.sleep(INTERVAL_S)
             except Exception as exc:
