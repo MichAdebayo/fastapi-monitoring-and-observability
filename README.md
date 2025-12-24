@@ -7,7 +7,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 
 <p align="center">
-  <img src="image/fast-monitoring.png" alt="Project banner - Prometheus target up" width="760" />
+  <img src="image/fastapi-monitoring.png" alt="Project banner - FastAPI Monitoring" width="760" />
 </p>
 
 ## 📖 Overview
