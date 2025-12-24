@@ -6,6 +6,10 @@
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.127+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 
+<p align="center">
+  <img src="image/fast-monitoring.png" alt="Project banner - Prometheus target up" width="760" />
+</p>
+
 ## 📖 Overview
 
 This project is a practical implementation of monitoring and observability patterns for a FastAPI application. It was developed as part of a training brief to master **Prometheus** instrumentation, **Grafana** visualization, and **Locust** stress testing.
